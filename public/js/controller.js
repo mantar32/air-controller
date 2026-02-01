@@ -127,201 +127,202 @@ class ControllerApp {
     // ===================================
     // Socket Events
     // ===================================
+    setupSocketEvents() {
         this.socket.on('connect', () => {
-        console.log('Connected to server');
-        if (this.roomCode && this.player) {
-            console.log('Rejoining room...', this.roomCode);
-            this.socket.emit('join-room', { roomCode: this.roomCode, playerName: this.player.name }, (response) => {
-                if (response.success) {
-                    this.player = response.player; // Update player info (might be new ID)
-                    if (response.currentGame) {
-                        this.currentGame = response.currentGame;
-                        this.showController();
+            console.log('Connected to server');
+            if (this.roomCode && this.player) {
+                console.log('Rejoining room...', this.roomCode);
+                this.socket.emit('join-room', { roomCode: this.roomCode, playerName: this.player.name }, (response) => {
+                    if (response.success) {
+                        this.player = response.player; // Update player info (might be new ID)
+                        if (response.currentGame) {
+                            this.currentGame = response.currentGame;
+                            this.showController();
+                        } else {
+                            this.showWaiting();
+                        }
                     } else {
-                        this.showWaiting();
+                        // If room no longer exists or error, reset
+                        this.roomCode = null;
+                        this.player = null;
+                        this.showScreen('code');
+                        this.showError('Bağlantı yenilendi, lütfen tekrar giriş yapın.');
                     }
-                } else {
-                    // If room no longer exists or error, reset
-                    this.roomCode = null;
-                    this.player = null;
-                    this.showScreen('code');
-                    this.showError('Bağlantı yenilendi, lütfen tekrar giriş yapın.');
-                }
-            });
-        }
-    });
+                });
+            }
+        });
 
-this.socket.on('disconnect', () => {
-    console.log('Disconnected from server');
-});
+        this.socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
 
-this.socket.on('game-started', (gameId) => {
-    this.currentGame = gameId;
-    this.showController();
-});
+        this.socket.on('game-started', (gameId) => {
+            this.currentGame = gameId;
+            this.showController();
+        });
 
-this.socket.on('game-ended', () => {
-    this.currentGame = null;
-    this.showWaiting();
-});
+        this.socket.on('game-ended', () => {
+            this.currentGame = null;
+            this.showWaiting();
+        });
 
-this.socket.on('room-closed', () => {
-    alert('Oda kapatıldı!');
-    location.reload();
-});
+        this.socket.on('room-closed', () => {
+            alert('Oda kapatıldı!');
+            location.reload();
+        });
 
-this.socket.on('game-state', (state) => {
-    // Handle game state updates from screen
-    if (state.type === 'player-accepted') {
-        this.vibrate(100);
-    }
-});
+        this.socket.on('game-state', (state) => {
+            // Handle game state updates from screen
+            if (state.type === 'player-accepted') {
+                this.vibrate(100);
+            }
+        });
     }
 
-// ===================================
-// Joystick
-// ===================================
-setupJoystick() {
-    const joystickZone = document.getElementById('joystick-zone');
-    const joystick = document.getElementById('joystick');
-    const base = document.querySelector('.joystick-base');
+    // ===================================
+    // Joystick
+    // ===================================
+    setupJoystick() {
+        const joystickZone = document.getElementById('joystick-zone');
+        const joystick = document.getElementById('joystick');
+        const base = document.querySelector('.joystick-base');
 
-    let isDragging = false;
-    let centerX = 0;
-    let centerY = 0;
-    const maxDistance = 55;
+        let isDragging = false;
+        let centerX = 0;
+        let centerY = 0;
+        const maxDistance = 55;
 
-    const updateCenter = () => {
-        const rect = base.getBoundingClientRect();
-        centerX = rect.left + rect.width / 2;
-        centerY = rect.top + rect.height / 2;
-    };
+        const updateCenter = () => {
+            const rect = base.getBoundingClientRect();
+            centerX = rect.left + rect.width / 2;
+            centerY = rect.top + rect.height / 2;
+        };
 
-    const handleStart = (e) => {
-        isDragging = true;
-        joystick.classList.add('active');
-        updateCenter();
-        handleMove(e);
-    };
+        const handleStart = (e) => {
+            isDragging = true;
+            joystick.classList.add('active');
+            updateCenter();
+            handleMove(e);
+        };
 
-    const handleMove = (e) => {
-        if (!isDragging) return;
+        const handleMove = (e) => {
+            if (!isDragging) return;
 
-        e.preventDefault();
+            e.preventDefault();
 
-        const touch = e.touches ? e.touches[0] : e;
-        let dx = touch.clientX - centerX;
-        let dy = touch.clientY - centerY;
+            const touch = e.touches ? e.touches[0] : e;
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
 
-        const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance > maxDistance) {
-            dx = (dx / distance) * maxDistance;
-            dy = (dy / distance) * maxDistance;
-        }
+            if (distance > maxDistance) {
+                dx = (dx / distance) * maxDistance;
+                dy = (dy / distance) * maxDistance;
+            }
 
-        joystick.style.transform = `translate(${dx}px, ${dy}px)`;
+            joystick.style.transform = `translate(${dx}px, ${dy}px)`;
 
-        // Normalize to -1 to 1
-        this.inputState.joystickX = dx / maxDistance;
-        this.inputState.joystickY = dy / maxDistance;
+            // Normalize to -1 to 1
+            this.inputState.joystickX = dx / maxDistance;
+            this.inputState.joystickY = dy / maxDistance;
 
-        // Update directional states
-        this.inputState.left = this.inputState.joystickX < -0.5;
-        this.inputState.right = this.inputState.joystickX > 0.5;
-        this.inputState.up = this.inputState.joystickY < -0.5;
-        this.inputState.down = this.inputState.joystickY > 0.5;
+            // Update directional states
+            this.inputState.left = this.inputState.joystickX < -0.5;
+            this.inputState.right = this.inputState.joystickX > 0.5;
+            this.inputState.up = this.inputState.joystickY < -0.5;
+            this.inputState.down = this.inputState.joystickY > 0.5;
 
-        this.sendInput();
-    };
+            this.sendInput();
+        };
 
-    const handleEnd = () => {
-        isDragging = false;
-        joystick.classList.remove('active');
-        joystick.style.transform = 'translate(0, 0)';
+        const handleEnd = () => {
+            isDragging = false;
+            joystick.classList.remove('active');
+            joystick.style.transform = 'translate(0, 0)';
 
-        this.inputState.joystickX = 0;
-        this.inputState.joystickY = 0;
-        this.inputState.left = false;
-        this.inputState.right = false;
-        this.inputState.up = false;
-        this.inputState.down = false;
+            this.inputState.joystickX = 0;
+            this.inputState.joystickY = 0;
+            this.inputState.left = false;
+            this.inputState.right = false;
+            this.inputState.up = false;
+            this.inputState.down = false;
 
-        this.sendInput();
-    };
+            this.sendInput();
+        };
 
-    // Touch events
-    joystickZone.addEventListener('touchstart', handleStart, { passive: false });
-    joystickZone.addEventListener('touchmove', handleMove, { passive: false });
-    joystickZone.addEventListener('touchend', handleEnd);
-    joystickZone.addEventListener('touchcancel', handleEnd);
+        // Touch events
+        joystickZone.addEventListener('touchstart', handleStart, { passive: false });
+        joystickZone.addEventListener('touchmove', handleMove, { passive: false });
+        joystickZone.addEventListener('touchend', handleEnd);
+        joystickZone.addEventListener('touchcancel', handleEnd);
 
-    // Mouse events (for testing)
-    joystickZone.addEventListener('mousedown', handleStart);
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleEnd);
-}
-
-// ===================================
-// Buttons
-// ===================================
-setupButtons() {
-    const btnA = document.getElementById('btn-a');
-    const btnB = document.getElementById('btn-b');
-
-    const handleButton = (btn, key, pressed) => {
-        this.inputState[key] = pressed;
-        if (pressed) {
-            this.vibrate(30);
-        }
-        this.sendInput();
-    };
-
-    // Button A
-    btnA.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        handleButton(btnA, 'buttonA', true);
-    });
-    btnA.addEventListener('touchend', () => handleButton(btnA, 'buttonA', false));
-    btnA.addEventListener('mousedown', () => handleButton(btnA, 'buttonA', true));
-    btnA.addEventListener('mouseup', () => handleButton(btnA, 'buttonA', false));
-
-    // Button B
-    btnB.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        handleButton(btnB, 'buttonB', true);
-    });
-    btnB.addEventListener('touchend', () => handleButton(btnB, 'buttonB', false));
-    btnB.addEventListener('mousedown', () => handleButton(btnB, 'buttonB', true));
-    btnB.addEventListener('mouseup', () => handleButton(btnB, 'buttonB', false));
-}
-
-// ===================================
-// Input Sending
-// ===================================
-sendInput() {
-    if (!this.currentGame) return;
-
-    this.socket.emit('controller-input', {
-        joystickX: this.inputState.joystickX,
-        joystickY: this.inputState.joystickY,
-        up: this.inputState.up,
-        down: this.inputState.down,
-        left: this.inputState.left,
-        right: this.inputState.right,
-        buttonA: this.inputState.buttonA,
-        buttonB: this.inputState.buttonB
-    });
-}
-
-// ===================================
-// Vibration
-// ===================================
-vibrate(duration) {
-    if (navigator.vibrate) {
-        navigator.vibrate(duration);
+        // Mouse events (for testing)
+        joystickZone.addEventListener('mousedown', handleStart);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
     }
-}
+
+    // ===================================
+    // Buttons
+    // ===================================
+    setupButtons() {
+        const btnA = document.getElementById('btn-a');
+        const btnB = document.getElementById('btn-b');
+
+        const handleButton = (btn, key, pressed) => {
+            this.inputState[key] = pressed;
+            if (pressed) {
+                this.vibrate(30);
+            }
+            this.sendInput();
+        };
+
+        // Button A
+        btnA.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleButton(btnA, 'buttonA', true);
+        });
+        btnA.addEventListener('touchend', () => handleButton(btnA, 'buttonA', false));
+        btnA.addEventListener('mousedown', () => handleButton(btnA, 'buttonA', true));
+        btnA.addEventListener('mouseup', () => handleButton(btnA, 'buttonA', false));
+
+        // Button B
+        btnB.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleButton(btnB, 'buttonB', true);
+        });
+        btnB.addEventListener('touchend', () => handleButton(btnB, 'buttonB', false));
+        btnB.addEventListener('mousedown', () => handleButton(btnB, 'buttonB', true));
+        btnB.addEventListener('mouseup', () => handleButton(btnB, 'buttonB', false));
+    }
+
+    // ===================================
+    // Input Sending
+    // ===================================
+    sendInput() {
+        if (!this.currentGame) return;
+
+        this.socket.emit('controller-input', {
+            joystickX: this.inputState.joystickX,
+            joystickY: this.inputState.joystickY,
+            up: this.inputState.up,
+            down: this.inputState.down,
+            left: this.inputState.left,
+            right: this.inputState.right,
+            buttonA: this.inputState.buttonA,
+            buttonB: this.inputState.buttonB
+        });
+    }
+
+    // ===================================
+    // Vibration
+    // ===================================
+    vibrate(duration) {
+        if (navigator.vibrate) {
+            navigator.vibrate(duration);
+        }
+    }
 }
 
 // Initialize
