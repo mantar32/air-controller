@@ -30,7 +30,7 @@ function generateRoomCode() {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
-  
+
   // Screen creates a new room
   socket.on('create-room', (callback) => {
     const roomCode = generateRoomCode();
@@ -46,22 +46,22 @@ io.on('connection', (socket) => {
     console.log(`Room created: ${roomCode}`);
     callback({ success: true, roomCode });
   });
-  
+
   // Controller joins a room
   socket.on('join-room', (data, callback) => {
     const { roomCode, playerName } = data;
     const room = rooms.get(roomCode);
-    
+
     if (!room) {
       callback({ success: false, error: 'Room not found' });
       return;
     }
-    
+
     if (room.players.length >= 8) {
       callback({ success: false, error: 'Room is full' });
       return;
     }
-    
+
     const playerNumber = room.players.length + 1;
     const player = {
       id: socket.id,
@@ -69,20 +69,20 @@ io.on('connection', (socket) => {
       number: playerNumber,
       color: getPlayerColor(playerNumber)
     };
-    
+
     room.players.push(player);
     socket.join(roomCode);
     socket.roomCode = roomCode;
     socket.playerId = socket.id;
     socket.playerNumber = playerNumber;
-    
+
     // Notify screen about new player
     io.to(room.screenId).emit('player-joined', player);
-    
+
     callback({ success: true, player, currentGame: room.currentGame });
     console.log(`${player.name} joined room ${roomCode}`);
   });
-  
+
   // Controller sends input
   socket.on('controller-input', (input) => {
     const room = rooms.get(socket.roomCode);
@@ -94,7 +94,7 @@ io.on('connection', (socket) => {
       });
     }
   });
-  
+
   // Screen starts a game
   socket.on('start-game', (gameId) => {
     const room = rooms.get(socket.roomCode);
@@ -104,7 +104,7 @@ io.on('connection', (socket) => {
       console.log(`Game ${gameId} started in room ${socket.roomCode}`);
     }
   });
-  
+
   // Screen sends game state to controllers
   socket.on('game-state', (state) => {
     const room = rooms.get(socket.roomCode);
@@ -112,7 +112,7 @@ io.on('connection', (socket) => {
       socket.to(socket.roomCode).emit('game-state', state);
     }
   });
-  
+
   // Screen ends game
   socket.on('end-game', () => {
     const room = rooms.get(socket.roomCode);
@@ -121,11 +121,11 @@ io.on('connection', (socket) => {
       io.to(socket.roomCode).emit('game-ended');
     }
   });
-  
+
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
-    
+
     if (socket.roomCode) {
       const room = rooms.get(socket.roomCode);
       if (room) {
@@ -182,3 +182,6 @@ server.listen(PORT, () => {
 ╚════════════════════════════════════════════════════╝
   `);
 });
+
+// Export for Vercel
+module.exports = app;
