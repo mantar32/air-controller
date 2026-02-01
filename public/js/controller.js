@@ -1,7 +1,10 @@
 // Controller logic
+// Socket.IO backend URL - Render.com server
+const SOCKET_URL = 'https://air-controller.onrender.com';
+
 class ControllerApp {
     constructor() {
-        this.socket = io();
+        this.socket = io(SOCKET_URL);
         this.roomCode = null;
         this.player = null;
         this.currentGame = null;

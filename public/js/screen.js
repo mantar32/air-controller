@@ -1,7 +1,10 @@
 // Screen Controller - Main display logic
+// Socket.IO backend URL - Render.com server
+const SOCKET_URL = 'https://air-controller.onrender.com';
+
 class ScreenController {
     constructor() {
-        this.socket = io();
+        this.socket = io(SOCKET_URL);
         this.roomCode = null;
         this.players = [];
         this.currentGame = null;
