@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>AirController - Kumanda</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/css/controller.css">
+</head>
+
+<body>
+    <!-- Code Entry Screen -->
+    <div id="code-screen" class="screen active">
+        <div class="controller-header">
+            <h1 class="logo">AIR<span>CONTROLLER</span></h1>
+        </div>
+
+        <div class="code-entry">
+            <label>BAĞLANTI KODU</label>
+            <div class="code-inputs">
+                <input type="text" maxlength="1" class="code-digit" data-index="0" inputmode="numeric">
+                <input type="text" maxlength="1" class="code-digit" data-index="1" inputmode="numeric">
+                <input type="text" maxlength="1" class="code-digit" data-index="2" inputmode="numeric">
+                <input type="text" maxlength="1" class="code-digit" data-index="3" inputmode="numeric">
+            </div>
+
+            <div class="name-entry">
+                <label>İSMİN</label>
+                <input type="text" id="player-name" placeholder="Oyuncu" maxlength="12">
+            </div>
+
+            <button class="btn-connect" id="btn-connect">
+                BAĞLAN
+            </button>
+
+            <div class="error-message" id="error-message"></div>
+        </div>
+    </div>
+
+    <!-- Waiting Screen -->
+    <div id="waiting-screen" class="screen">
+        <div class="waiting-content">
+            <div class="player-info">
+                <div class="player-avatar" id="my-avatar">1</div>
+                <div class="player-name" id="my-name">Oyuncu</div>
+            </div>
+            <div class="connected-badge">✓ BAĞLANDI</div>
+            <p class="waiting-text">Oyunun başlaması bekleniyor...</p>
+            <div class="pulse-ring"></div>
+        </div>
+    </div>
+
+    <!-- Controller Screen -->
+    <div id="controller-screen" class="screen">
+        <div class="controller-layout" id="controller-layout">
+            <!-- Default: D-Pad + Buttons -->
+            <div class="control-zone left">
+                <div class="joystick-container" id="joystick-zone">
+                    <div class="joystick-base">
+                        <div class="joystick-stick" id="joystick"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-zone right">
+                <div class="action-buttons">
+                    <button class="action-btn btn-a" id="btn-a">A</button>
+                    <button class="action-btn btn-b" id="btn-b">B</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/controller.js"></script>
+</body>
+
+</html>

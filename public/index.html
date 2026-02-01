@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AirController - Multiplayer Games</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <!-- Connection Screen -->
+  <div id="connection-screen" class="screen active">
+    <div class="logo-container">
+      <h1 class="logo">AIR<span>CONTROLLER</span></h1>
+      <p class="tagline">Telefonunu kumandaya çevir!</p>
+    </div>
+    
+    <div class="code-container">
+      <div class="code-label">BAĞLANTI KODU</div>
+      <div class="code-display" id="room-code">----</div>
+      <div class="code-instruction">
+        Telefonunda <strong>aynı IP:3000/controller</strong> adresini aç
+      </div>
+    </div>
+    
+    <div class="players-container">
+      <div class="players-label">OYUNCULAR</div>
+      <div class="players-list" id="players-list">
+        <div class="waiting-text">Oyuncular bekleniyor...</div>
+      </div>
+    </div>
+    
+    <button class="btn-primary" id="btn-browse-games" disabled>
+      <span class="btn-icon">🎮</span>
+      OYUNLARA GÖZ AT
+    </button>
+  </div>
+
+  <!-- Game Selection Screen -->
+  <div id="game-selection" class="screen">
+    <div class="header">
+      <button class="btn-back" id="btn-back-to-lobby">← Lobiye Dön</button>
+      <h2>OYUN SEÇ</h2>
+      <div class="player-count" id="header-player-count">0 Oyuncu</div>
+    </div>
+    
+    <div class="games-grid" id="games-grid">
+      <!-- Games will be loaded here -->
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="screen">
+    <div class="game-header">
+      <button class="btn-back" id="btn-end-game">✕ Oyunu Bitir</button>
+      <div class="game-title" id="current-game-title">-</div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/games.js"></script>
+  <script src="/js/screen.js"></script>
+</body>
+</html>
