@@ -21,7 +21,6 @@ class ScreenController {
 
     init() {
         this.bindEvents();
-        this.createRoom();
     }
 
     bindEvents() {
@@ -39,6 +38,10 @@ class ScreenController {
         });
 
         // Socket events
+        this.socket.on('connect', () => {
+            console.log('Connected to server, request creating room...');
+            this.createRoom();
+        });
         this.socket.on('player-joined', (player) => this.onPlayerJoined(player));
         this.socket.on('player-left', (data) => this.onPlayerLeft(data));
         this.socket.on('controller-input', (input) => this.onControllerInput(input));
