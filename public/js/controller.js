@@ -8,6 +8,7 @@ class ControllerApp {
         this.roomCode = null;
         this.player = null;
         this.currentGame = null;
+        this.controlMode = 'joystick'; // 'joystick', 'arrows', 'tilt'
 
         this.screens = {
             code: document.getElementById('code-screen'),
@@ -35,6 +36,9 @@ class ControllerApp {
         this.setupSocketEvents();
         this.setupJoystick();
         this.setupButtons();
+        this.setupControlModes();
+        this.setupArrowButtons();
+        this.setupTiltControl();
     }
 
     // ===================================
@@ -321,6 +325,175 @@ class ControllerApp {
     vibrate(duration) {
         if (navigator.vibrate) {
             navigator.vibrate(duration);
+        }
+    }
+
+    // ===================================
+    // Control Mode Switching
+    // ===================================
+    setupControlModes() {
+        const modeButtons = document.querySelectorAll('.mode-btn');
+        const joystickZone = document.getElementById('joystick-zone');
+        const arrowButtons = document.getElementById('arrow-buttons');
+        const tiltContainer = document.getElementById('tilt-container');
+
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+                this.controlMode = mode;
+
+                // Update button states
+                modeButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Show/hide control elements
+                joystickZone.classList.toggle('hidden', mode !== 'joystick');
+                arrowButtons.classList.toggle('hidden', mode !== 'arrows');
+                tiltContainer.classList.toggle('hidden', mode !== 'tilt');
+
+                // Stop tilt listening if not in tilt mode
+                if (mode === 'tilt') {
+                    this.startTiltListening();
+                } else {
+                    this.stopTiltListening();
+                }
+
+                // Reset input state
+                this.inputState.joystickX = 0;
+                this.inputState.joystickY = 0;
+                this.inputState.left = false;
+                this.inputState.right = false;
+                this.sendInput();
+
+                this.vibrate(30);
+            });
+        });
+    }
+
+    // ===================================
+    // Arrow Buttons
+    // ===================================
+    setupArrowButtons() {
+        const leftBtn = document.getElementById('arrow-left');
+        const rightBtn = document.getElementById('arrow-right');
+
+        const handleArrow = (direction, pressed) => {
+            if (direction === 'left') {
+                this.inputState.left = pressed;
+                this.inputState.joystickX = pressed ? -1 : (this.inputState.right ? 1 : 0);
+            } else {
+                this.inputState.right = pressed;
+                this.inputState.joystickX = pressed ? 1 : (this.inputState.left ? -1 : 0);
+            }
+            if (pressed) this.vibrate(20);
+            this.sendInput();
+        };
+
+        // Left button
+        leftBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            leftBtn.classList.add('pressed');
+            handleArrow('left', true);
+        });
+        leftBtn.addEventListener('touchend', () => {
+            leftBtn.classList.remove('pressed');
+            handleArrow('left', false);
+        });
+        leftBtn.addEventListener('mousedown', () => {
+            leftBtn.classList.add('pressed');
+            handleArrow('left', true);
+        });
+        leftBtn.addEventListener('mouseup', () => {
+            leftBtn.classList.remove('pressed');
+            handleArrow('left', false);
+        });
+
+        // Right button  
+        rightBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            rightBtn.classList.add('pressed');
+            handleArrow('right', true);
+        });
+        rightBtn.addEventListener('touchend', () => {
+            rightBtn.classList.remove('pressed');
+            handleArrow('right', false);
+        });
+        rightBtn.addEventListener('mousedown', () => {
+            rightBtn.classList.add('pressed');
+            handleArrow('right', true);
+        });
+        rightBtn.addEventListener('mouseup', () => {
+            rightBtn.classList.remove('pressed');
+            handleArrow('right', false);
+        });
+    }
+
+    // ===================================
+    // Tilt Control (Gyroscope/Accelerometer)
+    // ===================================
+    setupTiltControl() {
+        this.tiltBall = document.getElementById('tilt-ball');
+        this.tiltActive = false;
+        this.tiltHandler = null;
+    }
+
+    startTiltListening() {
+        if (this.tiltActive) return;
+
+        // Request permission on iOS
+        if (typeof DeviceOrientationEvent !== 'undefined' &&
+            typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(permission => {
+                    if (permission === 'granted') {
+                        this.addTiltListener();
+                    }
+                })
+                .catch(console.error);
+        } else {
+            this.addTiltListener();
+        }
+    }
+
+    addTiltListener() {
+        this.tiltActive = true;
+        this.tiltHandler = (event) => {
+            if (this.controlMode !== 'tilt') return;
+
+            // gamma: left/right tilt (-90 to 90)
+            let tilt = event.gamma || 0;
+
+            // Clamp and normalize (-30 to 30 degrees maps to -1 to 1)
+            tilt = Math.max(-30, Math.min(30, tilt));
+            const normalizedTilt = tilt / 30;
+
+            // Update visual indicator
+            if (this.tiltBall) {
+                const ballPos = 50 + (normalizedTilt * 40); // 10% to 90%
+                this.tiltBall.style.left = ballPos + '%';
+            }
+
+            // Update input state
+            this.inputState.joystickX = normalizedTilt;
+            this.inputState.left = normalizedTilt < -0.3;
+            this.inputState.right = normalizedTilt > 0.3;
+
+            this.sendInput();
+        };
+
+        window.addEventListener('deviceorientation', this.tiltHandler);
+    }
+
+    stopTiltListening() {
+        if (this.tiltHandler) {
+            window.removeEventListener('deviceorientation', this.tiltHandler);
+            this.tiltHandler = null;
+        }
+        this.tiltActive = false;
+
+        // Reset tilt ball position
+        if (this.tiltBall) {
+            this.tiltBall.style.left = '50%';
         }
     }
 }

@@ -161,6 +161,8 @@ class ScreenController {
             this.gameInstance = new CarDodgeGame(canvas, this.players, this.socket);
         } else if (game.id === 'puzzle') {
             this.gameInstance = new PuzzleGame(canvas, this.players, this.socket);
+        } else if (game.id === 'duel') {
+            this.gameInstance = new DuelGame(canvas, this.players, this.socket);
         }
 
         if (this.gameInstance) {

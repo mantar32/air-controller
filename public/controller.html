@@ -56,13 +56,36 @@
 
     <!-- Controller Screen -->
     <div id="controller-screen" class="screen">
+        <!-- Control Mode Selector -->
+        <div class="control-mode-selector" id="control-mode-selector">
+            <button class="mode-btn active" data-mode="joystick" title="Joystick">🕹️</button>
+            <button class="mode-btn" data-mode="arrows" title="Ok Tuşları">⬅️➡️</button>
+            <button class="mode-btn" data-mode="tilt" title="Eğme">📱</button>
+        </div>
+
         <div class="controller-layout" id="controller-layout">
-            <!-- Default: D-Pad + Buttons -->
-            <div class="control-zone left">
+            <!-- Joystick Mode (default) -->
+            <div class="control-zone left" id="control-zone-left">
+                <!-- Joystick Container -->
                 <div class="joystick-container" id="joystick-zone">
                     <div class="joystick-base">
                         <div class="joystick-stick" id="joystick"></div>
                     </div>
+                </div>
+
+                <!-- Arrow Buttons (hidden by default) -->
+                <div class="arrow-buttons hidden" id="arrow-buttons">
+                    <button class="arrow-btn arrow-left" id="arrow-left">◀</button>
+                    <button class="arrow-btn arrow-right" id="arrow-right">▶</button>
+                </div>
+
+                <!-- Tilt Indicator (hidden by default) -->
+                <div class="tilt-container hidden" id="tilt-container">
+                    <div class="tilt-indicator">
+                        <div class="tilt-ball" id="tilt-ball"></div>
+                        <div class="tilt-center"></div>
+                    </div>
+                    <p class="tilt-hint">📱 Telefonu eğ!</p>
                 </div>
             </div>
 

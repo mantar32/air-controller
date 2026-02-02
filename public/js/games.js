@@ -53,6 +53,15 @@ const GAMES = [
         minPlayers: 1,
         maxPlayers: 4,
         description: 'Zaman baskılı bulmaca!'
+    },
+    {
+        id: 'duel',
+        title: 'DUEL ARENA',
+        icon: '⚔️',
+        category: 'Action',
+        minPlayers: 2,
+        maxPlayers: 2,
+        description: '1v1 silah düellosu! Rakibini vur!'
     }
 ];
 
@@ -159,8 +168,8 @@ class PongGame {
         };
 
         this.paddles = {
-            left: { y: this.canvas.height / 2 - this.paddleHeight / 2, score: 0 },
-            right: { y: this.canvas.height / 2 - this.paddleHeight / 2, score: 0 }
+            left: { y: this.canvas.height / 2 - this.paddleHeight / 2, score: 0, charging: false },
+            right: { y: this.canvas.height / 2 - this.paddleHeight / 2, score: 0, charging: false }
         };
 
         this.inputs = {};
@@ -209,6 +218,14 @@ class PongGame {
             }
         }
 
+        // Power shot charging with B button
+        if (this.inputs.left) {
+            this.paddles.left.charging = this.inputs.left.buttonB;
+        }
+        if (this.inputs.right) {
+            this.paddles.right.charging = this.inputs.right.buttonB;
+        }
+
         // Clamp paddles
         this.paddles.left.y = Math.max(0, Math.min(this.canvas.height - this.paddleHeight, this.paddles.left.y));
         this.paddles.right.y = Math.max(0, Math.min(this.canvas.height - this.paddleHeight, this.paddles.right.y));
@@ -234,11 +251,12 @@ class PongGame {
             this.ball.y >= this.paddles.left.y - 10 &&
             this.ball.y <= this.paddles.left.y + this.paddleHeight + 10 &&
             this.ball.vx < 0) {
-            this.ball.vx = Math.abs(this.ball.vx) * 1.05;
+            const powerMultiplier = this.paddles.left.charging ? 1.3 : 1.05;
+            this.ball.vx = Math.abs(this.ball.vx) * powerMultiplier;
             const hitPos = (this.ball.y - (this.paddles.left.y + this.paddleHeight / 2)) / (this.paddleHeight / 2);
-            this.ball.vy = hitPos * 8;
-            this.particles.emit(this.ball.x, this.ball.y, this.players[0]?.color || '#FF6B6B', 15, { x: 5, y: 0 });
-            this.screenShake = 5;
+            this.ball.vy = hitPos * (this.paddles.left.charging ? 12 : 8);
+            this.particles.emit(this.ball.x, this.ball.y, this.players[0]?.color || '#FF6B6B', this.paddles.left.charging ? 25 : 15, { x: 5, y: 0 });
+            this.screenShake = this.paddles.left.charging ? 10 : 5;
         }
 
         // Paddle collision - Right
@@ -246,11 +264,12 @@ class PongGame {
             this.ball.y >= this.paddles.right.y - 10 &&
             this.ball.y <= this.paddles.right.y + this.paddleHeight + 10 &&
             this.ball.vx > 0) {
-            this.ball.vx = -Math.abs(this.ball.vx) * 1.05;
+            const powerMultiplier = this.paddles.right.charging ? 1.3 : 1.05;
+            this.ball.vx = -Math.abs(this.ball.vx) * powerMultiplier;
             const hitPos = (this.ball.y - (this.paddles.right.y + this.paddleHeight / 2)) / (this.paddleHeight / 2);
-            this.ball.vy = hitPos * 8;
-            this.particles.emit(this.ball.x, this.ball.y, this.players[1]?.color || '#4ECDC4', 15, { x: -5, y: 0 });
-            this.screenShake = 5;
+            this.ball.vy = hitPos * (this.paddles.right.charging ? 12 : 8);
+            this.particles.emit(this.ball.x, this.ball.y, this.players[1]?.color || '#4ECDC4', this.paddles.right.charging ? 25 : 15, { x: -5, y: 0 });
+            this.screenShake = this.paddles.right.charging ? 10 : 5;
         }
 
         // Scoring
@@ -591,6 +610,15 @@ class RacingGame {
             }
             ship.boostCooldown = Math.max(0, ship.boostCooldown - 1);
 
+            // Brake with B button
+            if (input.buttonB) {
+                ship.speed *= 0.85;
+                // Brake particles
+                if (this.gameTime % 3 === 0) {
+                    this.particles.emit(ship.x, ship.y, '#ff4444', 3);
+                }
+            }
+
             // Apply friction
             ship.speed *= friction;
 
@@ -825,7 +853,8 @@ class SnakeGame {
             name: player.name,
             playerNumber: player.number,
             alive: true,
-            score: 0
+            score: 0,
+            speedBoost: false
         }));
 
         // Initialize body length
@@ -896,6 +925,9 @@ class SnakeGame {
         if (newDir && (newDir.x !== -snake.direction.x || newDir.y !== -snake.direction.y)) {
             snake.nextDirection = newDir;
         }
+
+        // Speed boost with B button
+        snake.speedBoost = input.buttonB;
     }
 
     gameLoop() {
@@ -909,7 +941,11 @@ class SnakeGame {
         this.moveTimer++;
         this.food.forEach(f => f.pulse++);
 
-        if (this.moveTimer >= this.moveInterval) {
+        // Dynamic move interval based on any snake boosting
+        const anyBoosting = this.snakes.some(s => s.alive && s.speedBoost);
+        const currentInterval = anyBoosting ? Math.floor(this.moveInterval / 2) : this.moveInterval;
+
+        if (this.moveTimer >= currentInterval) {
             this.moveTimer = 0;
 
             this.snakes.forEach(snake => {
@@ -1798,6 +1834,15 @@ class CarDodgeGame {
             car.nitro = 180;
             car.nitroFuel = 0; // Use all fuel
         }
+
+        // Emergency shield with B button (60 second cooldown)
+        if (input.buttonB && !car.buttonBPressed && car.shield <= 0 && (car.shieldCooldown || 0) <= 0) {
+            car.shield = 180; // 3 seconds protection
+            car.shieldCooldown = 3600; // 60 second cooldown
+            this.particles.emit(car.x, this.viewportHeight - 100 + car.viewportY, '#4ECDC4', 25);
+        }
+        car.buttonBPressed = input.buttonB;
+        if (car.shieldCooldown > 0) car.shieldCooldown--;
 
         this.inputs[input.playerNumber] = input;
     }
@@ -2761,4 +2806,570 @@ class PuzzleGame {
         ctx.fill();
     }
 }
+
+// ===================================
+// DUEL ARENA GAME - TOP-DOWN SHOOTER
+// ===================================
+class DuelGame {
+    constructor(canvas, players, socket) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.players = players;
+        this.socket = socket;
+        this.running = false;
+        this.lastTime = 0;
+
+        this.particles = new ParticleSystem();
+
+        // Game config
+        this.PLAYER_SPEED = 4;
+        this.BULLET_SPEED = 12;
+        this.SHOOT_COOLDOWN = 250;
+        this.DASH_COOLDOWN = 2000;
+        this.DASH_SPEED = 15;
+        this.DASH_DURATION = 150;
+        this.KNOCKBACK = 6;
+        this.ROUND_TIME = 60;
+        this.ROUNDS_TO_WIN = 3;
+        this.PLAYER_RADIUS = 20;
+        this.BULLET_DAMAGE = 10;
+
+        this.init();
+    }
+
+    init() {
+        const colors = ['#4ECDC4', '#FF6B6B'];
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        // Arena bounds (with padding)
+        this.arena = {
+            x: 50,
+            y: 100,
+            width: w - 100,
+            height: h - 150
+        };
+
+        // Obstacles (cover)
+        this.obstacles = [
+            { x: w / 2 - 40, y: h / 2 - 60, width: 80, height: 120 },
+            { x: w / 4 - 30, y: h / 2 - 25, width: 60, height: 50 },
+            { x: w * 3 / 4 - 30, y: h / 2 - 25, width: 60, height: 50 }
+        ];
+
+        // Create fighters
+        this.fighters = this.players.slice(0, 2).map((player, i) => ({
+            x: i === 0 ? this.arena.x + 100 : this.arena.x + this.arena.width - 100,
+            y: this.arena.y + this.arena.height / 2,
+            vx: 0,
+            vy: 0,
+            color: player.color || colors[i],
+            name: player.name,
+            playerNumber: player.number,
+            health: 100,
+            maxHealth: 100,
+            aimAngle: i === 0 ? 0 : Math.PI,
+            lastShot: 0,
+            lastDash: 0,
+            dashEndTime: 0,
+            invincible: 0,
+            score: 0,
+            state: 'idle' // idle, move, shoot, hit, dash
+        }));
+
+        this.bullets = [];
+        this.inputs = {};
+        this.roundTime = this.ROUND_TIME;
+        this.gameState = 'playing';
+        this.roundTimer = null;
+        this.roundNumber = 1;
+
+        this.startRoundTimer();
+    }
+
+    startRoundTimer() {
+        if (this.roundTimer) clearInterval(this.roundTimer);
+        this.roundTimer = setInterval(() => {
+            if (this.gameState === 'playing' && this.running) {
+                this.roundTime--;
+                if (this.roundTime <= 0) this.endRound();
+            }
+        }, 1000);
+    }
+
+    start() {
+        this.running = true;
+        this.lastTime = performance.now();
+        this.gameLoop();
+    }
+
+    stop() {
+        this.running = false;
+        if (this.roundTimer) clearInterval(this.roundTimer);
+    }
+
+    handleInput(input) {
+        this.inputs[input.playerNumber] = input;
+    }
+
+    endRound() {
+        this.gameState = 'roundEnd';
+
+        // Determine round winner
+        if (this.fighters[0].health > this.fighters[1].health) {
+            this.fighters[0].score++;
+        } else if (this.fighters[1].health > this.fighters[0].health) {
+            this.fighters[1].score++;
+        }
+
+        // Check game winner
+        const winner = this.fighters.find(f => f.score >= this.ROUNDS_TO_WIN);
+        if (winner) {
+            this.gameState = 'gameEnd';
+        } else {
+            this.roundNumber++;
+            setTimeout(() => this.resetRound(), 2000);
+        }
+    }
+
+    resetRound() {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        this.fighters[0].x = this.arena.x + 100;
+        this.fighters[0].y = this.arena.y + this.arena.height / 2;
+        this.fighters[0].health = 100;
+        this.fighters[0].vx = 0;
+        this.fighters[0].vy = 0;
+        this.fighters[0].aimAngle = 0;
+
+        this.fighters[1].x = this.arena.x + this.arena.width - 100;
+        this.fighters[1].y = this.arena.y + this.arena.height / 2;
+        this.fighters[1].health = 100;
+        this.fighters[1].vx = 0;
+        this.fighters[1].vy = 0;
+        this.fighters[1].aimAngle = Math.PI;
+
+        this.bullets = [];
+        this.roundTime = this.ROUND_TIME;
+        this.gameState = 'playing';
+    }
+
+    gameLoop() {
+        if (!this.running) return;
+
+        const now = performance.now();
+        const dt = Math.min((now - this.lastTime) / 16.67, 2); // Normalize to ~60fps
+        this.lastTime = now;
+
+        this.update(dt);
+        this.render();
+        requestAnimationFrame(() => this.gameLoop());
+    }
+
+    update(dt) {
+        if (this.gameState !== 'playing') return;
+
+        const now = Date.now();
+
+        this.fighters.forEach((fighter, idx) => {
+            const input = this.inputs[fighter.playerNumber] || {};
+            const isDashing = now < fighter.dashEndTime;
+
+            // Movement from joystick (360° top-down)
+            if (!isDashing) {
+                const moveX = input.joystickX || 0;
+                const moveY = input.joystickY || 0;
+                const moveLen = Math.sqrt(moveX * moveX + moveY * moveY);
+
+                if (moveLen > 0.1) {
+                    fighter.vx = (moveX / Math.max(1, moveLen)) * this.PLAYER_SPEED;
+                    fighter.vy = (moveY / Math.max(1, moveLen)) * this.PLAYER_SPEED;
+                    fighter.state = 'move';
+                } else {
+                    fighter.vx *= 0.8;
+                    fighter.vy *= 0.8;
+                    if (Math.abs(fighter.vx) < 0.1) fighter.vx = 0;
+                    if (Math.abs(fighter.vy) < 0.1) fighter.vy = 0;
+                    fighter.state = 'idle';
+                }
+            }
+
+            // Dash with A button
+            if (input.buttonA && now - fighter.lastDash >= this.DASH_COOLDOWN && !isDashing) {
+                fighter.lastDash = now;
+                fighter.dashEndTime = now + this.DASH_DURATION;
+                fighter.invincible = 10; // Brief invincibility
+
+                // Dash in movement direction or aim direction
+                const dashAngle = (Math.abs(fighter.vx) > 0.1 || Math.abs(fighter.vy) > 0.1)
+                    ? Math.atan2(fighter.vy, fighter.vx)
+                    : fighter.aimAngle;
+                fighter.vx = Math.cos(dashAngle) * this.DASH_SPEED;
+                fighter.vy = Math.sin(dashAngle) * this.DASH_SPEED;
+                fighter.state = 'dash';
+
+                this.particles.emit(fighter.x, fighter.y, fighter.color, 15);
+            }
+
+            // Update aim from joystick direction (for controller)
+            const aimX = input.joystickX || 0;
+            const aimY = input.joystickY || 0;
+            if (Math.abs(aimX) > 0.3 || Math.abs(aimY) > 0.3) {
+                fighter.aimAngle = Math.atan2(aimY, aimX);
+            }
+
+            // Shooting with B button
+            if (input.buttonB && now - fighter.lastShot >= this.SHOOT_COOLDOWN) {
+                fighter.lastShot = now;
+                fighter.state = 'shoot';
+
+                const bulletX = fighter.x + Math.cos(fighter.aimAngle) * (this.PLAYER_RADIUS + 10);
+                const bulletY = fighter.y + Math.sin(fighter.aimAngle) * (this.PLAYER_RADIUS + 10);
+
+                this.bullets.push({
+                    x: bulletX,
+                    y: bulletY,
+                    vx: Math.cos(fighter.aimAngle) * this.BULLET_SPEED,
+                    vy: Math.sin(fighter.aimAngle) * this.BULLET_SPEED,
+                    owner: idx,
+                    active: true
+                });
+
+                // Muzzle flash particles
+                this.particles.emit(bulletX, bulletY, '#ffff00', 8);
+            }
+
+            // Position update
+            fighter.x += fighter.vx * dt;
+            fighter.y += fighter.vy * dt;
+
+            // Arena bounds collision
+            fighter.x = Math.max(this.arena.x + this.PLAYER_RADIUS,
+                Math.min(this.arena.x + this.arena.width - this.PLAYER_RADIUS, fighter.x));
+            fighter.y = Math.max(this.arena.y + this.PLAYER_RADIUS,
+                Math.min(this.arena.y + this.arena.height - this.PLAYER_RADIUS, fighter.y));
+
+            // Obstacle collision
+            this.obstacles.forEach(obs => {
+                const closestX = Math.max(obs.x, Math.min(fighter.x, obs.x + obs.width));
+                const closestY = Math.max(obs.y, Math.min(fighter.y, obs.y + obs.height));
+                const dx = fighter.x - closestX;
+                const dy = fighter.y - closestY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < this.PLAYER_RADIUS) {
+                    const overlap = this.PLAYER_RADIUS - dist;
+                    if (dist > 0) {
+                        fighter.x += (dx / dist) * overlap;
+                        fighter.y += (dy / dist) * overlap;
+                    }
+                }
+            });
+
+            // Invincibility timer
+            if (fighter.invincible > 0) fighter.invincible--;
+        });
+
+        // Update bullets
+        this.bullets.forEach(bullet => {
+            bullet.x += bullet.vx * dt;
+            bullet.y += bullet.vy * dt;
+
+            // Arena bounds
+            if (bullet.x < this.arena.x || bullet.x > this.arena.x + this.arena.width ||
+                bullet.y < this.arena.y || bullet.y > this.arena.y + this.arena.height) {
+                bullet.active = false;
+            }
+
+            // Obstacle collision
+            this.obstacles.forEach(obs => {
+                if (bullet.x > obs.x && bullet.x < obs.x + obs.width &&
+                    bullet.y > obs.y && bullet.y < obs.y + obs.height) {
+                    bullet.active = false;
+                    this.particles.emit(bullet.x, bullet.y, '#888', 5);
+                }
+            });
+
+            // Hit detection
+            this.fighters.forEach((fighter, idx) => {
+                if (idx === bullet.owner || !bullet.active) return;
+                if (fighter.invincible > 0) return;
+
+                const dx = bullet.x - fighter.x;
+                const dy = bullet.y - fighter.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < this.PLAYER_RADIUS + 5) {
+                    fighter.health -= this.BULLET_DAMAGE;
+                    fighter.state = 'hit';
+
+                    // Knockback
+                    const knockAngle = Math.atan2(dy, dx);
+                    fighter.vx = Math.cos(knockAngle) * this.KNOCKBACK;
+                    fighter.vy = Math.sin(knockAngle) * this.KNOCKBACK;
+                    fighter.invincible = 15;
+
+                    bullet.active = false;
+                    this.particles.emit(bullet.x, bullet.y, '#ff8800', 20);
+                }
+            });
+        });
+
+        this.bullets = this.bullets.filter(b => b.active);
+
+        // Check death
+        this.fighters.forEach(fighter => {
+            if (fighter.health <= 0) {
+                this.endRound();
+            }
+        });
+
+        this.particles.update();
+    }
+
+    render() {
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        // Background
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, w, h);
+
+        // Arena floor
+        ctx.fillStyle = '#16213e';
+        ctx.fillRect(this.arena.x, this.arena.y, this.arena.width, this.arena.height);
+
+        // Arena grid
+        ctx.strokeStyle = 'rgba(139, 92, 246, 0.1)';
+        ctx.lineWidth = 1;
+        for (let x = this.arena.x; x <= this.arena.x + this.arena.width; x += 40) {
+            ctx.beginPath();
+            ctx.moveTo(x, this.arena.y);
+            ctx.lineTo(x, this.arena.y + this.arena.height);
+            ctx.stroke();
+        }
+        for (let y = this.arena.y; y <= this.arena.y + this.arena.height; y += 40) {
+            ctx.beginPath();
+            ctx.moveTo(this.arena.x, y);
+            ctx.lineTo(this.arena.x + this.arena.width, y);
+            ctx.stroke();
+        }
+
+        // Arena border
+        ctx.strokeStyle = '#8b5cf6';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(this.arena.x, this.arena.y, this.arena.width, this.arena.height);
+
+        // Obstacles
+        ctx.fillStyle = '#2d3561';
+        this.obstacles.forEach(obs => {
+            ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            ctx.strokeStyle = '#4d5581';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+        });
+
+        // Fighters
+        this.fighters.forEach((fighter, idx) => {
+            const isInvincible = fighter.invincible > 0;
+            const isDashing = Date.now() < fighter.dashEndTime;
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(fighter.x, fighter.y + 5, this.PLAYER_RADIUS, this.PLAYER_RADIUS * 0.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Body
+            ctx.fillStyle = isInvincible && fighter.invincible % 4 < 2 ? '#ffffff' : fighter.color;
+            ctx.shadowBlur = isDashing ? 20 : 10;
+            ctx.shadowColor = fighter.color;
+            ctx.beginPath();
+            ctx.arc(fighter.x, fighter.y, this.PLAYER_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Direction indicator / gun
+            ctx.save();
+            ctx.translate(fighter.x, fighter.y);
+            ctx.rotate(fighter.aimAngle);
+
+            // Gun barrel
+            ctx.fillStyle = '#333';
+            ctx.fillRect(this.PLAYER_RADIUS - 5, -4, 20, 8);
+
+            // Gun tip
+            ctx.fillStyle = '#555';
+            ctx.fillRect(this.PLAYER_RADIUS + 10, -3, 5, 6);
+
+            ctx.restore();
+
+            // Player number indicator
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText(`P${idx + 1}`, fighter.x, fighter.y + 5);
+
+            // Name above
+            ctx.fillStyle = fighter.color;
+            ctx.font = 'bold 11px Inter';
+            ctx.fillText(fighter.name, fighter.x, fighter.y - this.PLAYER_RADIUS - 10);
+
+            // Health bar above name
+            const hpBarWidth = 50;
+            const hpPercent = Math.max(0, fighter.health / 100);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(fighter.x - hpBarWidth / 2, fighter.y - this.PLAYER_RADIUS - 25, hpBarWidth, 6);
+            ctx.fillStyle = hpPercent > 0.3 ? fighter.color : '#ff4444';
+            ctx.fillRect(fighter.x - hpBarWidth / 2, fighter.y - this.PLAYER_RADIUS - 25, hpBarWidth * hpPercent, 6);
+        });
+
+        // Bullets
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#ffff00';
+        ctx.fillStyle = '#ffff00';
+        this.bullets.forEach(b => {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.shadowBlur = 0;
+
+        // Particles
+        this.particles.draw(ctx);
+
+        // UI
+        this.drawUI();
+
+        // Round/game end overlay
+        if (this.gameState === 'roundEnd' || this.gameState === 'gameEnd') {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 48px Orbitron';
+
+            if (this.gameState === 'gameEnd') {
+                const winner = this.fighters[0].score > this.fighters[1].score ? this.fighters[0] : this.fighters[1];
+                ctx.fillStyle = winner.color;
+                ctx.fillText(`${winner.name} KAZANDI!`, w / 2, h / 2);
+                ctx.font = '24px Inter';
+                ctx.fillStyle = '#fff';
+                ctx.fillText(`${this.fighters[0].score} - ${this.fighters[1].score}`, w / 2, h / 2 + 50);
+            } else {
+                ctx.fillStyle = '#fff';
+                ctx.fillText('RAUND BİTTİ', w / 2, h / 2);
+
+                const roundWinner = this.fighters[0].health > this.fighters[1].health ? this.fighters[0] :
+                    this.fighters[1].health > this.fighters[0].health ? this.fighters[1] : null;
+                if (roundWinner) {
+                    ctx.font = '24px Inter';
+                    ctx.fillStyle = roundWinner.color;
+                    ctx.fillText(`${roundWinner.name} raund kazandı!`, w / 2, h / 2 + 50);
+                }
+            }
+        }
+    }
+
+    drawUI() {
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+
+        // Health bars at top
+        const barWidth = 200;
+        const barHeight = 25;
+        const barY = 20;
+
+        // P1 health (left)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(20, barY, barWidth + 4, barHeight + 4);
+        const p1Hp = Math.max(0, this.fighters[0].health / 100);
+        ctx.fillStyle = this.fighters[0].color;
+        ctx.fillRect(22, barY + 2, barWidth * p1Hp, barHeight);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px Inter';
+        ctx.textAlign = 'left';
+        ctx.fillText(this.fighters[0].name, 25, barY + 18);
+
+        // P2 health (right)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(w - 24 - barWidth, barY, barWidth + 4, barHeight + 4);
+        const p2Hp = Math.max(0, this.fighters[1].health / 100);
+        ctx.fillStyle = this.fighters[1].color;
+        ctx.fillRect(w - 22 - barWidth * p2Hp, barY + 2, barWidth * p2Hp, barHeight);
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'right';
+        ctx.fillText(this.fighters[1].name, w - 25, barY + 18);
+
+        // Round scores (center top)
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 32px Orbitron';
+        ctx.fillStyle = this.fighters[0].color;
+        ctx.fillText(this.fighters[0].score, w / 2 - 50, 45);
+        ctx.fillStyle = '#fff';
+        ctx.fillText('-', w / 2, 45);
+        ctx.fillStyle = this.fighters[1].color;
+        ctx.fillText(this.fighters[1].score, w / 2 + 50, 45);
+
+        // Round number
+        ctx.font = '14px Inter';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillText(`RAUND ${this.roundNumber}`, w / 2, 65);
+
+        // Timer
+        ctx.font = 'bold 28px Orbitron';
+        ctx.fillStyle = this.roundTime <= 10 ? '#ff4444' : '#ffffff';
+        ctx.fillText(this.roundTime, w / 2, 95);
+
+        // Controls hint
+        ctx.font = '12px Inter';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.fillText('🕹️ Joystick = Hareket/Nişan | A = Dash | B = Ateş', w / 2, this.canvas.height - 15);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -390,3 +390,144 @@ body {
 .vibrate {
     animation: vibrate 0.1s linear;
 }
+
+/* ================================
+   Control Mode Selector
+================================ */
+.control-mode-selector {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 8px 15px;
+    border-radius: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mode-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mode-btn.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.mode-btn:active {
+    transform: scale(0.95);
+}
+
+/* ================================
+   Arrow Buttons
+================================ */
+.arrow-buttons {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+}
+
+.arrow-buttons.hidden {
+    display: none;
+}
+
+.arrow-btn {
+    width: 100px;
+    height: 100px;
+    border-radius: 20px;
+    border: 3px solid rgba(139, 92, 246, 0.5);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(6, 182, 212, 0.3));
+    font-size: 2.5rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.arrow-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.6), rgba(6, 182, 212, 0.6));
+}
+
+.arrow-btn.pressed {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+}
+
+/* ================================
+   Tilt Control
+================================ */
+.tilt-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.tilt-container.hidden {
+    display: none;
+}
+
+.tilt-indicator {
+    width: 180px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 40px;
+    position: relative;
+    overflow: hidden;
+}
+
+.tilt-ball {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 20px var(--primary-glow);
+    transition: left 0.1s ease;
+}
+
+.tilt-center {
+    width: 20px;
+    height: 20px;
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.tilt-hint {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* Hide joystick when not in joystick mode */
+.joystick-container.hidden {
+    display: none;
+}
